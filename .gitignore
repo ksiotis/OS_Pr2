@@ -1,2 +1,4 @@
 .vscode
+builder
 *.trace
+emulation
