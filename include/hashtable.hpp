@@ -21,7 +21,7 @@ public:
     int getBucketNumber();
     int getTotalCount();
     bool search(int rec);
-    void insert(int page, int frame);
+    void insert(T *content);
 
     T* getContentByKey(int page);
 };
@@ -77,15 +77,16 @@ bool hashtable<T>::search(int rec) {
 }
 
 template<typename T>
-void hashtable<T>::insert(int page, int frame) {
+void hashtable<T>::insert(T *content) {
 /*attempts to insert rec into the hashtable,
   if it already exists => do nothing,
   if not => inserts rec to the list of apropriate bucket*/
+    int page = content->getPageNum();
     if (!search(page)) { //if keyvalue is not in a bucket
         unsigned int bucket = hash(page);
         if (table[bucket] == NULL)
             table[bucket]= new list<T>();
-        table[bucket]->insert(page, frame);
+        table[bucket]->insert(content);
         count++;
     }
 }

@@ -9,6 +9,18 @@
 
 #define PAGESIZE 4096 
 
+// template<typename T>
+// bool actualcount(list<T> &mylist) {
+//     int count = 0;
+//     listNode<T> *current = mylist.getStart();
+//     while (current != NULL) {
+//         count++;
+
+//         current = current->getNext();
+//     }
+//     return (count == mylist.getCount());
+// }
+
 //~~~~~~~~global counters~~~~~~~~~~
 int secondChanceVictim = 0;
 
@@ -19,7 +31,7 @@ int writeToDisc = 0;
 int removeFromMemory = 0;
 int simpleLoad = 0;
 
-int findvictim(list<memoryentry> &mymemory, const char *algorithm);
+int findvictim(list<memoryentry> &mymemory, const char *algorithm, int maxframes);
 
 int main(int argc, char **argv) {
     //TODO ~~~~~~~~~~~~~~~~~~~ handle input arguments ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -42,7 +54,7 @@ int main(int argc, char **argv) {
         std::cerr << "Bad arguments! algorithm should be 'LRU' or 'SC'" << std::endl;
         return -2;
     }
-    if (q < 1) {
+    if (maxFrames < 1) {
         std::cerr << "Bad arguments! maxFrames must be a positive integer" << std::endl;
         return -2;
     }
@@ -64,9 +76,10 @@ int main(int argc, char **argv) {
     //TODO ~~~~~~~~~~~~~~~~~~~ initialization of data ~~~~~~~~~~~~~~~~~~~~~~~~
 
     hashtable<hashentry> index(16);
+    list<memoryentry> memorycontainer;
     list<memoryentry> mymemory;
 
-    char current = 0;
+    unsigned char current = 0;
     char finished = 0;
 
     char *line = NULL;
@@ -87,23 +100,24 @@ int main(int argc, char **argv) {
             char flag = line[strlen(line)-2];
 
             int pagenum = number / PAGESIZE;
-            int offset = number % PAGESIZE;
+            // int offset = number % PAGESIZE;
 
             hashentry *newhashentry = index.getContentByKey(pagenum); //if not inside hashtable add it
             if (newhashentry == NULL) { 
-                index.insert(pagenum, mymemory.getCount());
+
+                index.insert(new hashentry(pagenum, mymemory.getCount()));
                 newhashentry = index.getContentByKey(pagenum);
             }
             if (!newhashentry->getLoaded()) { //if not loaded, load it
 
                 if (mymemory.getCount() < maxFrames) {//if memory is not full, simply load it
-                    mymemory.insert(pagenum, mymemory.getCount() - 1);
-                    newhashentry->setFrame(mymemory.getCount() - 1);
-
+                    memoryentry *newmem = new memoryentry(pagenum, mymemory.getCount());
+                    memorycontainer.insert(newmem);
+                    mymemory.insert(newmem);
                     simpleLoad++;
                 }
                 else { //if needed to throw away another one
-                    int victimpage = findvictim(mymemory, algorithm); //find which one
+                    int victimpage = findvictim(mymemory, algorithm, maxFrames); //find which one
                     memoryentry *victim = mymemory.getContentByKey(victimpage);
                     if (victim->getDirty()) //if it is changed, write it
                         writeToDisc++;
@@ -111,9 +125,9 @@ int main(int argc, char **argv) {
                     mymemory.remove(victimpage); //remove it
                     index.getContentByKey(victimpage)->setLoaded(false); //mark it as unloaded
 
-                    mymemory.insert(pagenum, frame); //insert new one
-                    newhashentry->setFrame(frame); //update frame in index
-
+                    memoryentry *newmem = new memoryentry(pagenum, frame);
+                    memorycontainer.insert(newmem);
+                    mymemory.insert(newmem); //insert new one
                     removeFromMemory++;
                 }
                 newhashentry->setLoaded(true);
@@ -122,8 +136,21 @@ int main(int argc, char **argv) {
 
             memoryentry *currentEntry = mymemory.getContentByKey(pagenum);
             currentEntry->setSecondChance(true);
-            if (algorithm == "LRU") {
-                memoryentry temp = currentEntry;
+            if (strcmp(algorithm, "LRU") == 0) { //if LRU get current memory entry to the back of the list and reset its second chance
+                memoryentry *tempmem = mymemory.getContentByKey(pagenum);
+                mymemory.remove(pagenum);
+                mymemory.insert(tempmem); //resets second chance to default true
+            }
+
+            if (flag == 'R') {
+                readFromMemory++;
+            }
+            else if (flag == 'W') {
+                mymemory.getContentByKey(pagenum)->setDirty(true);
+                writeToMemory++;
+            }
+            else {
+                //TODO print error
             }
 
         }
@@ -137,6 +164,12 @@ int main(int argc, char **argv) {
             current = (current == 0 ? 1 : 0);
         }
     }
+    std::cout << "readFromMemory = " << readFromMemory << std::endl;
+    std::cout << "writeToMemory = " << writeToMemory << std::endl;
+    std::cout << "readFromDisc = " << readFromDisc << std::endl;
+    std::cout << "writeToDisc = " << writeToDisc << std::endl;
+    std::cout << "removeFromMemory = " << removeFromMemory << std::endl;
+    std::cout << "simpleLoad = " << simpleLoad << std::endl;
 
     // ~~~~~~~~~~~~~~~~~~~ delete allocated memory ~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -146,6 +179,37 @@ int main(int argc, char **argv) {
     return 0;
 }
 
-int findvictim(list<memoryentry> &mymemory, const char *algorithm) {
+memoryentry *getContentByFrame(list<memoryentry> &mymemory, int frame) {
+    listNode<memoryentry> *current = mymemory.getStart();
+    while (current != NULL) {
+        if (current->getContent()->getFrame() == frame)
+            return current->getContent();
 
+        current = current->getNext();
+    }
+    return NULL;
+}
+
+int findvictim(list<memoryentry> &mymemory, const char *algorithm, int maxframes) {
+    if (strcmp(algorithm, "LRU") == 0) {
+        if (mymemory.getStart() != NULL)
+            return mymemory.getStart()->getContent()->getPageNum();
+        else
+            return -1;
+    }
+    else if (strcmp(algorithm, "SC") == 0) {
+        memoryentry *possiblevictim = getContentByFrame(mymemory, secondChanceVictim);
+        while (possiblevictim->getSecondChance()) { //while they have a second chance
+            possiblevictim->setSecondChance(false);
+
+            secondChanceVictim = (secondChanceVictim + 1) % maxframes; //move to the next frame
+            possiblevictim = getContentByFrame(mymemory, secondChanceVictim);
+        }
+        secondChanceVictim = (secondChanceVictim + 1) % maxframes;
+        return possiblevictim->getPageNum();
+    }
+    else {
+        std::cerr << "Invalid algorithm!" << std::endl;
+        return -1;
+    }
 }

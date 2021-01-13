@@ -8,9 +8,7 @@ memoryentry::memoryentry(int page, int frame) :
     secondChance(true) {
 }
 
-memoryentry::~memoryentry() {
-    std::cout << "del" << std::endl;
-}
+memoryentry::~memoryentry() {}
 
 int memoryentry::getPageNum() { return page; }
 

@@ -9,10 +9,10 @@
 template <typename T>
 class listNode {
 private:
-    T content;
+    T* content;
     listNode<T> *next;
 public:
-    listNode(int page, int frame);
+    listNode(T *content);
     ~listNode();
 
     T *getContent();
@@ -34,7 +34,7 @@ public:
     int getCount();
     listNode<T> *getStart();
     listNode<T> *getEnd();
-    void insert(int page, int frame);
+    void insert(T *content);
 
     void printAll();
     bool search(int test);
@@ -46,8 +46,8 @@ public:
 //~~~~~~~~~~~~~~~~~~~listNode~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 template <typename T>
-listNode<T>::listNode(int page, int frame) :
-    content(page, frame),
+listNode<T>::listNode(T* content) :
+    content(content),
     next(NULL) {
 }
 
@@ -55,7 +55,7 @@ template <typename T>
 listNode<T>::~listNode() {}
 
 template <typename T>
-T *listNode<T>::getContent() { return &content; }
+T *listNode<T>::getContent() { return content; }
 
 template <typename T>
 listNode<T>* listNode<T>::getNext() { return next; }
@@ -92,9 +92,9 @@ template <typename T>
 listNode<T>* list<T>::getEnd() { return end; }
 
 template <typename T>
-void list<T>::insert(int page, int frame) {
+void list<T>::insert(T *content) {
 //insert to the end of list
-    listNode<T> *temp = new listNode<T>(page, frame);
+    listNode<T> *temp = new listNode<T>(content);
     if (start != NULL)
         end->setNext(temp);
     else
@@ -132,7 +132,7 @@ void list<T>::remove(int test) {
     listNode<T> *previous = NULL;
     listNode<T> *current = start;
     while (current != NULL) {
-        if (current->getPageNum() == test) {
+        if (current->getContent()->getPageNum() == test) {
             if (previous != NULL)
                 previous->setNext(current->getNext());
             else
@@ -145,8 +145,10 @@ void list<T>::remove(int test) {
             delete current;
             break;
         }
+        previous = current;
         current = current->getNext();
     }
+    count--;
     return;
 }
 
