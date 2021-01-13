@@ -50,6 +50,16 @@ int main(int argc, char **argv) {
     const char *algorithm = argv[1];
     int maxFrames = atoi(argv[2]);
     int q = atoi(argv[3]);
+    int maxlines = -1;
+
+    if (argc == 5) {
+        maxlines = atoi(argv[4]);
+        if (maxlines < 1) {
+            std::cerr << "Bad arguments! maxLines must be a positive integer" << std::endl;
+            return -2;
+        }
+    }
+
     if (strcmp(algorithm, "LRU") != 0 && strcmp(algorithm, "SC") != 0) {
         std::cerr << "Bad arguments! algorithm should be 'LRU' or 'SC'" << std::endl;
         return -2;
@@ -63,6 +73,9 @@ int main(int argc, char **argv) {
         return -2;
     }
 
+    //TODO ~~~~~~~~~~~~~~~~~~~ initialization of data ~~~~~~~~~~~~~~~~~~~~~~~~
+
+    
     FILE *fptr[2];
     if ((fptr[0] = fopen("gcc.trace", "r")) == NULL) {
         printf("Error! opening file 1");
@@ -73,8 +86,6 @@ int main(int argc, char **argv) {
         return -3;
     }
 
-    //TODO ~~~~~~~~~~~~~~~~~~~ initialization of data ~~~~~~~~~~~~~~~~~~~~~~~~
-
     hashtable<hashentry> index(16);
     list<memoryentry> memorycontainer;
     list<memoryentry> mymemory;
@@ -82,6 +93,7 @@ int main(int argc, char **argv) {
     unsigned char current = 0;
     char finished = 0;
 
+    int linesread[2] = {0, 0};
     char *line = NULL;
     size_t len = 0;
     ssize_t read;
@@ -150,14 +162,19 @@ int main(int argc, char **argv) {
                 writeToMemory++;
             }
             else {
-                //TODO print error
+                std::cerr << "Invalid flag in line: " << line << std::endl;
             }
 
+
+            linesread[current]++;
+            if (linesread[current] >= maxlines && maxlines > 0) {
+                finished++;     //finished and switch to the other file
+                current = (current == 0 ? 1 : 0);
+                break;
+            }
         }
 
         if (finished == 2) { //if finished reading both files end program
-            //TODO end
-            
             break;
         }
         else if (!finished) { //if the other file is not finished, switch to that
@@ -172,6 +189,8 @@ int main(int argc, char **argv) {
     std::cout << "simpleLoad = " << simpleLoad << std::endl;
 
     // ~~~~~~~~~~~~~~~~~~~ delete allocated memory ~~~~~~~~~~~~~~~~~~~~~~~~
+
+    memorycontainer.emptyContent();
 
     free(line);
     fclose(fptr[0]);

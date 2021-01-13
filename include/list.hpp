@@ -41,6 +41,7 @@ public:
     void remove(int target);
     
     T *getContentByKey(int page);
+    void emptyContent();
 };
 
 //~~~~~~~~~~~~~~~~~~~listNode~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -164,6 +165,20 @@ T* list<T>::getContentByKey(int page) {
             current = current->getNext();
     }
     return NULL;
+}
+
+template <typename T>
+void list<T>::emptyContent() {
+    listNode<T> *curr = start;
+    while (curr != NULL) {
+        listNode<T> *newcurr = curr->getNext();
+        delete curr->getContent();
+        delete curr;
+        curr = newcurr;
+    }
+    count = 0;
+    start = NULL;
+    end = NULL;
 }
 
 #endif /* LIST_HPP */
