@@ -44,8 +44,10 @@ hashtable<T>::hashtable(int buckets) :
 template<typename T>
 hashtable<T>::~hashtable() {
     for (int i = 0; i < bucketNumber; ++i) {
-        if (table[i] != NULL)
+        if (table[i] != NULL) {
+            table[i]->emptyContent();
             delete table[i];
+        }
     }
     delete[] table;
 }
