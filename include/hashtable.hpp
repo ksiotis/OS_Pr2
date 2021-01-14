@@ -34,7 +34,8 @@ unsigned int hashtable<T>::hash(int address) {
 
 template<typename T>
 hashtable<T>::hashtable(int buckets) :
-    bucketNumber(buckets) {
+    bucketNumber(buckets),
+    count(0) {
     table = new list<T> *[bucketNumber];
     for (int i = 0; i < bucketNumber; i++) {
         table[i] = NULL;

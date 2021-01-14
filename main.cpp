@@ -29,7 +29,6 @@ int writeToMemory = 0;
 int readFromDisc = 0;
 int writeToDisc = 0;
 int removeFromMemory = 0;
-int simpleLoad = 0;
 
 int findvictim(list<memoryentry> &mymemory, const char *algorithm, int maxframes);
 
@@ -93,7 +92,7 @@ int main(int argc, char **argv) {
     unsigned char current = 0;
     char finished = 0;
 
-    int linesread[2] = {0, 0};
+    int linesread = 0;
     char *line = NULL;
     size_t len = 0;
     ssize_t read;
@@ -107,6 +106,7 @@ int main(int argc, char **argv) {
                 current = (current == 0 ? 1 : 0);
                 break;
             }
+
             //isolate number and R/W
             long number = strtol(line, NULL, 16);
             char flag = line[strlen(line)-2];
@@ -120,13 +120,12 @@ int main(int argc, char **argv) {
                 index.insert(new hashentry(pagenum, mymemory.getCount()));
                 newhashentry = index.getContentByKey(pagenum);
             }
-            if (!newhashentry->getLoaded()) { //if not loaded, load it
 
+            if (!newhashentry->getLoaded()) { //if not loaded, load it
                 if (mymemory.getCount() < maxFrames) {//if memory is not full, simply load it
                     memoryentry *newmem = new memoryentry(pagenum, mymemory.getCount());
                     memorycontainer.insert(newmem);
                     mymemory.insert(newmem);
-                    simpleLoad++;
                 }
                 else { //if needed to throw away another one
                     int victimpage = findvictim(mymemory, algorithm, maxFrames); //find which one
@@ -148,11 +147,12 @@ int main(int argc, char **argv) {
 
             memoryentry *currentEntry = mymemory.getContentByKey(pagenum);
             currentEntry->setSecondChance(true);
+            memoryentry *tempmem = mymemory.getContentByKey(pagenum);
             if (strcmp(algorithm, "LRU") == 0) { //if LRU get current memory entry to the back of the list and reset its second chance
-                memoryentry *tempmem = mymemory.getContentByKey(pagenum);
                 mymemory.remove(pagenum);
-                mymemory.insert(tempmem); //resets second chance to default true
+                mymemory.insert(tempmem);
             }
+            tempmem->setSecondChance(true);
 
             if (flag == 'R') {
                 readFromMemory++;
@@ -165,9 +165,8 @@ int main(int argc, char **argv) {
                 std::cerr << "Invalid flag in line: " << line << std::endl;
             }
 
-
-            linesread[current]++;
-            if (linesread[current] >= maxlines && maxlines > 0) {
+            linesread++;
+            if (linesread >= maxlines && maxlines > 0) {
                 finished++;     //finished and switch to the other file
                 current = (current == 0 ? 1 : 0);
                 break;
@@ -181,12 +180,22 @@ int main(int argc, char **argv) {
             current = (current == 0 ? 1 : 0);
         }
     }
+
+    //write changed pages to disk
+    listNode<memoryentry> *currentMem = mymemory.getStart();
+    while (currentMem != NULL) {
+        if (currentMem->getContent()->getDirty())
+            writeToDisc++;
+        currentMem = currentMem->getNext();
+    }
+
+    std::cout << "lines = " << linesread << std::endl;
     std::cout << "readFromMemory = " << readFromMemory << std::endl;
     std::cout << "writeToMemory = " << writeToMemory << std::endl;
     std::cout << "readFromDisc = " << readFromDisc << std::endl;
     std::cout << "writeToDisc = " << writeToDisc << std::endl;
     std::cout << "removeFromMemory = " << removeFromMemory << std::endl;
-    std::cout << "simpleLoad = " << simpleLoad << std::endl;
+    std::cout << "virtual pages = " << index.getTotalCount() << std::endl;
 
     // ~~~~~~~~~~~~~~~~~~~ delete allocated memory ~~~~~~~~~~~~~~~~~~~~~~~~
 
