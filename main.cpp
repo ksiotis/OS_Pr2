@@ -101,7 +101,7 @@ int main(int argc, char **argv) {
 
     while (1) {
         for (int i = 0; i < q; i++) {
-            if ((read = getline(&line, &len, fptr[current])) == -1) { //if reached EOF
+            if ((maxlines > 0 && linesread >= maxlines) || (read = getline(&line, &len, fptr[current])) == -1) { //if reached EOF
                 finished++;                                         //note it and switch to the other file
                 current = (current == 0 ? 1 : 0);
                 break;
@@ -189,13 +189,14 @@ int main(int argc, char **argv) {
         currentMem = currentMem->getNext();
     }
 
-    std::cout << "lines = " << linesread << std::endl;
-    std::cout << "readFromMemory = " << readFromMemory << std::endl;
-    std::cout << "writeToMemory = " << writeToMemory << std::endl;
-    std::cout << "readFromDisc = " << readFromDisc << std::endl;
-    std::cout << "writeToDisc = " << writeToDisc << std::endl;
-    std::cout << "removeFromMemory = " << removeFromMemory << std::endl;
-    std::cout << "virtual pages = " << index.getTotalCount() << std::endl;
+    std::cout << "entries : " << linesread << std::endl;
+    std::cout << "pagefaults: " << readFromDisc << std::endl;
+    std::cout << "physical memory frames used: " << mymemory.getCount() << std::endl;
+    std::cout << "virtual memory pages used: " << index.getTotalCount() << std::endl;
+    std::cout << "reads from memory: " << readFromMemory << std::endl;
+    std::cout << "writes to memory: " << writeToMemory << std::endl;
+    std::cout << "removes from memory: " << removeFromMemory << std::endl;
+    std::cout << "writes to disc: " << writeToDisc << std::endl;
 
     // ~~~~~~~~~~~~~~~~~~~ delete allocated memory ~~~~~~~~~~~~~~~~~~~~~~~~
 
